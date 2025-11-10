@@ -1,0 +1,291 @@
+/* Global styless */
+body {
+    
+    background-image: url("Statics/icon_blank.png");
+    background-size: contain;
+    background-position: center;
+    background-repeat: loop;
+    background-attachment: fixed;
+
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #2d2d2d;
+    margin: 0;
+    padding: 0;
+}
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+.logo {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #f1f4ff;
+    margin-right: auto;
+}
+
+/* Main Grid */
+.parent {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 14px;
+    height: 93vh;
+    margin: 2vw;
+    z-index: 1;
+}
+
+/* Leaderboard */
+.leaderboard {
+    border: 2px solid #444;
+    border-radius: 30px;
+    background: #ffffff;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+    background: linear-gradient(to bottom, rgba(10, 10, 146, 3), rgba(0,0,50,0));
+
+    grid-column: span 3 / span 3;
+    grid-row: span 5 / span 5;
+    grid-column-start: 3;
+    grid-row-start: 1;
+}
+
+/* Navigation */
+nav {
+    background: linear-gradient(135deg, #1c1c27, #2a2a3a);
+    padding: 14px 22px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+    display: flex;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    gap: 28px;
+    margin: 0;
+    padding: 0;
+}
+
+nav ul li {
+    padding: 5px;
+}
+
+nav ul li a {
+    color: #f1f4ff;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 8px 16px;
+    font-size: 1.1rem;
+    border-radius: 10px;
+    transition: all .2s ease;
+}
+
+nav ul li a:hover {
+    background: #5a67f6;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(90, 103, 246, 0.45);
+}
+
+/* CLICK DROPDOWN SETUP */
+nav ul li.dropdown {
+    position: relative;
+}
+
+nav ul li.dropdown input {
+    display: none;
+}
+
+/* Log Out clickable label */
+.logout_label {
+    color: #f1f4ff;
+    padding: 8px 16px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    display: block;
+}
+
+.logout_label:hover {
+    background: #5a67f6;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(90, 103, 246, 0.45);
+}
+
+/* Dropdown menu box */
+.out_confirm_dd {
+    display: none;
+    position: absolute;
+    background: #ffffff;
+    border: 1.5px solid #666;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    margin-top: 8px;
+    padding: 10px 0;
+    z-index: 1000;
+    width: 150px;
+}
+
+/* SHOW DROPDOWN ONLY WHEN CLICKED */
+nav ul li.dropdown input:checked + .logout_label + .out_confirm_dd {
+    display: block;
+}
+
+/* Dropdown links */
+.out_confirm_dd li a {
+    color: #333;
+    padding: 8px 14px;
+    display: block;
+    text-decoration: none;
+}
+
+.out_confirm_dd li a:hover {
+    background: #f0f0f0;
+}
+
+
+
+.ldb_container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 14px;
+    height: 100%;
+    z-index: 1;
+}
+
+
+.sections, .topic, .sort, .list {
+    border: 1.5px solid #999;
+    border-radius: 22px;
+    margin: 16px;
+    padding: 16px;
+    background: #fafaff;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    z-index: 2;
+
+}
+
+.list {
+    grid-column: span 3;
+    grid-row: span 4;
+
+    color: #00796B;
+    font-weight: bold;
+    border: #00796B solid 2px;
+    background: #E0F7fa;
+}
+
+.teacher_info {
+    border: 2px solid #444;
+    border-radius: 30px;
+    padding-top: 20px;
+    background: linear-gradient(135deg, #6d7dfc, #6673fa);
+    box-shadow: 0 6px 16px rgba(109, 125, 252, 0.45);
+    color: #fff;
+
+    grid-column: span 2;
+    grid-row-start: 1;
+}
+
+.teacher_info_container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.teacher_pfp {
+    grid-row: span 2;
+    height: 100px;
+    width: 100px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    background-image: url("Statics/blankProfile.jpg");
+    background-size: cover;
+    background-position: center;
+    margin-top: 12px;
+    justify-self: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.teacher_name {
+    grid-column: span 3;
+    background: #ffe0f5;
+    border: 2px solid #555;
+    border-radius: 20px;
+    padding: 10px 14px;
+    margin: 10px;
+    font-weight: 700;
+    color: #444;
+}
+
+.teacher_subject {
+    grid-column: span 2;
+    grid-column-start: 2;
+    background: #ffdafa;
+    border: 2px solid #555;
+    border-radius: 20px;
+    padding: 10px 14px;
+    margin: 10px;
+    font-style: italic;
+    color: #444;
+}
+
+.class_info {
+    border: 2px solid #444;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #8a65ed, #7a53e7);
+    box-shadow: 0 6px 16px rgba(138, 101, 237, 0.45);
+    color: #fff;
+
+    grid-column: span 2;
+    grid-row-start: 2;
+    grid-column-start: 1;
+}
+
+.class_info_container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.class_name,
+.class_size {
+    grid-column: span 4;
+    background: #ffe5f8;
+    border: 2px solid #555;
+    border-radius: 20px;
+    padding: 12px 16px;
+    margin: 10px;
+    color: #333;
+    font-weight: bold;
+}
+
+.top_ten_students {
+    grid-column: 2;
+    grid-row-start: 2;
+    grid-row-end: 4;
+
+    border: 2px solid black;
+    background: #e0f7fa;
+    border: 2px solid #00796b;
+    border-radius: 20px;
+    padding: 12px 16px;
+
+    color: #00796b;
+    font-weight: bold;
+}
+
+#topic_choices,
+#sort_choices,
+#section_choices {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1.5px solid #666;
+    font-size: 1rem;
+    width: 100%;
+}

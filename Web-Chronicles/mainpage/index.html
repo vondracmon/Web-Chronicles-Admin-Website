@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home page</title>
+    <link rel="stylesheet" href="index_css.css">
+</head>
+<body>
+
+<div class="navbar">
+    <nav>
+        <div class="logo">Web Chronicles</div>
+        <ul>
+            <li><a href="#home">Home</a></li>
+            <li><a href="#about">About</a></li>
+
+            <!-- CLICK-TO-OPEN DROPDOWN -->
+            <li class="dropdown">
+                <input type="checkbox" id="logout_dd">
+                <label for="logout_dd" class="logout_label">Log Out ▾</label>
+
+                <ul class="out_confirm_dd">
+                    <li><a href="#confirm">Confirm</a></li>
+                    <li><a href="#cancel">Cancel</a></li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+<div class="parent">
+    <div class="leaderboard">
+        <div class="ldb_container">
+            <div class="sections">
+                <label for="section_choices">Class Section:</label>
+                <select id="section_choices" name="section_choices">
+                    <option value="opt_all">All</option>
+                    <option value="opt_a">Section A</option>
+                    <option value="opt_b">Section B</option>
+                    <option value="opt_c">Section C</option>
+                </select>
+            </div>
+            <div class="topic">
+                <label for="topic_choices">Topic:</label>
+                <select id="topic_choices" name="topic_choices">
+                    <option value="opt_html">HTML</option>
+                    <option value="opt_css">CSS</option>
+                    <option value="opt_js">JavaScript</option>
+                    <option value="opt_sql">SQL</option>
+                </select>
+            </div>
+            <div class="sort">
+                <label for="sort_choices">Sort by:</label>
+                <select id="sort_choices" name="sort_choices">
+                    <option value="opt_points">Points</option>
+                    <option value="opt_rank">Rank</option>
+                    <option value="opt_name">Name</option>
+                </select>
+            </div>
+            <div class="list">list</div>
+        </div>
+    </div>
+
+    <div class="teacher_info">
+        <div class="teacher_info_container">
+            <div class="teacher_pfp">pfp</div>
+            <div class="teacher_name">name</div>
+            <div class="teacher_subject">subject</div>
+        </div>
+    </div>
+
+    <div class="class_info">
+        <div class="class_info_container">
+            <div class="class_name">class_name</div>
+            <div class="class_size">class_size</div>
+        </div>
+    </div>
+
+    <div class="top_ten_students">top_ten_students</div>
+</div>
+
+</body>
+</html>
