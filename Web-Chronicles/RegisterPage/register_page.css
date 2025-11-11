@@ -1,0 +1,98 @@
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
+/* Background */
+.background{
+    width: 100%;
+    height: 100vh;
+    background-image: url("../mainpage/Statics/Icon_blank.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1;
+}
+
+/* Banner */
+nav {
+    width: auto;
+    background: linear-gradient(135deg, #1c1c27, #2a2a3a);
+    padding: 14px 22px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+    display: flex;
+    margin: 0;
+}
+
+.logo {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #f1f4ff;
+    margin-right: auto;
+}
+
+/* Parent Grid */
+.parent{
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 14px;
+    height: 93vh;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #2d2d2d;
+}
+
+/* Register Box */
+.register_box {
+    grid-column: span 3 / span 3;
+    grid-column-start: 2;
+    grid-row-start: 2;
+
+    width: 100%;
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 40px;
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    text-align: center;
+}
+
+.register_form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+input {
+    width: 85%;
+    background: #ffe0f5;
+    border: 2px solid #555;
+    border-radius: 20px;
+    padding: 10px 14px;
+    margin: 10px auto;
+    font-weight: 700;
+    color: #444;
+}
+
+button {
+    width: 50%;
+    background: #1c1c27;
+    color: #f1f4ff;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 14px;
+    margin: 20px auto;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+button:hover {
+    background: #33334d;
+}
