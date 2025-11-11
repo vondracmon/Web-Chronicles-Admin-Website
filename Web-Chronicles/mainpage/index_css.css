@@ -179,6 +179,34 @@ nav ul li.dropdown input:checked + .logout_label + .out_confirm_dd {
     background: #E0F7fa;
 }
 
+/* Drag & drop highlight */
+#csvList.dragover {
+    background-color: #b2ebf2 !important;
+}
+
+/* CSV table styling */
+#csvList table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#csvList table td {
+    border: 1px solid #00796b;
+    padding: 6px;
+    background: white;
+    color: #004d40;
+    font-size: 0.9rem;
+}
+
+#csvList table tr:nth-child(even) td {
+    background: #e0f2f1;
+}
+
+
+
+
+
 .teacher_info {
     border: 2px solid #444;
     border-radius: 30px;
