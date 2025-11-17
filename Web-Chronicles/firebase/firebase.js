@@ -9,4 +9,8 @@ const firebaseConfig = {
   measurementId: "G-SVQGM57HNM"
 };
 
-const app = firebase.initializeApp(firebaseConfig);
+// Initialize Firebase (v8)
+firebase.initializeApp(firebaseConfig);
+
+// Firestore can be used like this:
+const db = firebase.firestore();

@@ -7,16 +7,11 @@
     <link rel="stylesheet" href="index_css.css">
 </head>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"></script>
-
-<script src="../firebase/firebase.js"></script>
 
 <body>
 
 <div class="navbar">
-    <script src="index.js"></script>
+
     <nav>
         <div class="logo">Web Chronicles</div>
         <ul>
@@ -40,32 +35,6 @@
 <div class="parent">
     <div class="leaderboard">
         <div class="ldb_container">
-            <div class="sections">
-                <label for="section_choices">Class Section:</label>
-                <select id="section_choices" name="section_choices">
-                    <option value="opt_all">All</option>
-                    <option value="opt_a">Section A</option>
-                    <option value="opt_b">Section B</option>
-                    <option value="opt_c">Section C</option>
-                </select>
-            </div>
-            <div class="topic">
-                <label for="topic_choices">Topic:</label>
-                <select id="topic_choices" name="topic_choices">
-                    <option value="opt_html">HTML</option>
-                    <option value="opt_css">CSS</option>
-                    <option value="opt_js">JavaScript</option>
-                    <option value="opt_sql">SQL</option>
-                </select>
-            </div>
-            <div class="sort">
-                <label for="sort_choices">Sort by:</label>
-                <select id="sort_choices" name="sort_choices">
-                    <option value="opt_points">Points</option>
-                    <option value="opt_rank">Rank</option>
-                    <option value="opt_name">Name</option>
-                </select>
-            </div>
             <div class="list" id="csvList">Drop CSV file here</div>
 
         </div>
@@ -75,7 +44,6 @@
         <div class="teacher_info_container">
             <div class="teacher_pfp">pfp</div>
             <div class="teacher_name">name</div>
-            <div class="teacher_subject">subject</div>
         </div>
     </div>
 
@@ -88,6 +56,6 @@
 
     <div class="top_ten_students" id="top_ten_students">top_ten_students</div>
 </div>
-
+    <script type="module" src="index.js"></script>
 </body>
 </html>

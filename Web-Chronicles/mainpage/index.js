@@ -1,121 +1,258 @@
-class index_app {
-    constructor() {
-        // Log out dropdown toggle
-        document.getElementById("logout_dd").addEventListener("click", function() {
-            document.getElementById("logout_dd").classList.toggle("show");
-        });
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-        // CSV drag-and-drop setup
-        this.csvList = document.getElementById("csvList");
-        this.initCSVDragDrop();
-    }
-
-    //=======================================
-    // Initialize drag-and-drop for CSV files
-    //=======================================
-    initCSVDragDrop() {
-        if (!this.csvList) return;
-
-        // Highlight on drag over
-        this.csvList.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            this.csvList.style.backgroundColor = "#b2ebf2";
-        });
-
-        // Remove highlight on leave
-        this.csvList.addEventListener("dragleave", () => {
-            this.csvList.style.backgroundColor = "#E0F7fa";
-        });
-
-        // Handle drop
-        this.csvList.addEventListener("drop", (e) => {
-            e.preventDefault();
-            this.csvList.style.backgroundColor = "#E0F7fa";
-
-            const files = e.dataTransfer.files;
-            if (files.length === 0) return;
-
-            const file = files[0];
-            if (file.type !== "text/csv") {
-                alert("Please drop a CSV file only!");
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const text = event.target.result;
-                this.displayCSV(text);
-            };
-            reader.readAsText(file);
-        });
-    }
-
-    displayCSV(data) {
-        // Normalize newlines to \n, then split to rows
-        let rows = data.replace(/\r\n/g, "\n").split("\n").filter(r => r.trim().length > 0);
-
-        // Safely parse each row as CSV
-        let parsed = rows.map(row =>
-            row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
-                .map(c => c.replace(/^"|"$/g, "").trim())
-        );
-
-        const header = parsed[0];
-        const nameIdx = header.findIndex(h => h.toLowerCase() === "name");
-        const studentNumIdx = header.findIndex(h => h.toLowerCase().includes("student number"));
-
-        if (nameIdx === -1 || studentNumIdx === -1) {
-            this.csvList.innerHTML = "<div>CSV must contain 'Name' and 'Student Number' columns.</div>";
-            return;
-        }
-
-        // Filter: ignore placeholder/truncated and fully empty rows after header
-        const dataRows = parsed.slice(1).filter(row =>
-            row.length > Math.max(nameIdx, studentNumIdx) &&
-            row[nameIdx] &&
-            !row[nameIdx].toLowerCase().includes("truncated for brevity")
-        );
-
-        // Build and display main table WITH score column
-        this.csvList.innerHTML = "";
-        const table = document.createElement("table");
-        // Add table header (add Score)
-        const tableHeader = document.createElement("tr");
-        [header[nameIdx], header[studentNumIdx], "Score"].forEach(cellText => {
-            const th = document.createElement("th");
-            th.textContent = cellText;
-            tableHeader.appendChild(th);
-        });
-        table.appendChild(tableHeader);
-
-        dataRows.forEach(row => {
-            const tr = document.createElement("tr");
-            // Fix: Remove .0 if it's at the end of the student number
-            const studentNumRaw = row[studentNumIdx];
-            const studentNumClean = studentNumRaw && studentNumRaw.endsWith('.0')
-                ? studentNumRaw.slice(0, -2)
-                : studentNumRaw;
-            [row[nameIdx], studentNumClean, "0"].forEach(cell => {
-                const td = document.createElement("td");
-                td.textContent = cell;
-                tr.appendChild(td);
-            });
-            table.appendChild(tr);
-        });
-
-        this.csvList.appendChild(table);
-
-        // Display top 10 names in top_ten_students div (still names only)
-        const topTenDiv = document.getElementById("top_ten_students");
-        if (topTenDiv) {
-            const topTenNames = dataRows.slice(0, 10).map(row => row[nameIdx]);
-            topTenDiv.innerHTML = topTenNames.map(name => `<p>${name}</p>`).join("");
-        }
-    }
-
-
-}
-
-window.onload = function() {
-    new index_app();
+// --- Firebase Config ---
+const firebaseConfig = {
+  apiKey: "AIzaSyBFonMdLxltVjWBsQAtHH60lxAFLedd19I",
+  authDomain: "web-chronicles.firebaseapp.com",
+  databaseURL: "https://web-chronicles-default-rtdb.firebaseio.com",
+  projectId: "web-chronicles",
+  storageBucket: "web-chronicles.firebasestorage.app",
+  messagingSenderId: "250178417089",
+  appId: "1:250178417089:web:29ff41b1864019d4efff40",
+  measurementId: "G-SVGQM57HNM"
 };
+
+// --- Initialize Firebase ---
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+document.addEventListener("DOMContentLoaded", () => {
+  const teacherPfp = document.querySelector(".teacher_pfp");
+  const teacherName = document.querySelector(".teacher_name");
+  const classNameDiv = document.querySelector(".class_name");
+  const classSizeDiv = document.querySelector(".class_size");
+  const csvList = document.getElementById("csvList");
+  const topTenDiv = document.getElementById("top_ten_students"); // div for Top 10
+
+  async function fetchTeacherInfo() {
+    try {
+      if (!teacherPfp || !teacherName) return;
+
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("role", "==", "Teacher"));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        teacherName.textContent = "No teacher found";
+        teacherPfp.style.backgroundImage = 'url("Statics/blankProfile.jpg")';
+        return;
+      }
+
+      const teacherDoc = querySnapshot.docs[0];
+      const data = teacherDoc.data();
+      const teacherId = teacherDoc.id;
+
+      teacherName.textContent = data.name || data.email;
+
+      const avatarSrc = data.pfpBase64 || "Statics/blankProfile.jpg";
+
+      teacherPfp.innerHTML = '';
+      const avatarImg = document.createElement("img");
+      avatarImg.src = avatarSrc;
+      avatarImg.classList.add("pfp_img");
+      avatarImg.style.width = "100%";
+      avatarImg.style.height = "100%";
+      avatarImg.style.borderRadius = "50%";
+      avatarImg.style.objectFit = "cover";
+      avatarImg.style.cursor = "pointer";
+
+      teacherPfp.appendChild(avatarImg);
+
+      avatarImg.addEventListener("click", () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+
+        input.onchange = async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const compressedBase64 = await resizeImage(file, 100, 100);
+          const teacherRef = doc(db, "users", teacherId);
+          await updateDoc(teacherRef, { pfpBase64: compressedBase64 });
+          avatarImg.src = compressedBase64;
+        };
+
+        input.click();
+      });
+
+    } catch (err) {
+      console.error("Error fetching teacher info:", err);
+      teacherName.textContent = "Error";
+      teacherPfp.style.backgroundImage = 'url("Statics/blankProfile.jpg")';
+    }
+  }
+
+  fetchTeacherInfo();
+
+  function resizeImage(file, maxWidth = 300, maxHeight = 300) {
+    return new Promise((resolve) => {
+      const img = document.createElement("img");
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        img.src = event.target.result;
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth || height > maxHeight) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.9));
+        };
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (csvList) {
+    csvList.style.position = "relative";
+    csvList.style.overflow = "auto";
+    csvList.style.maxHeight = "300px";
+
+    csvList.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      csvList.classList.add("dragover");
+    });
+
+    csvList.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      csvList.classList.remove("dragover");
+    });
+
+    csvList.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      csvList.classList.remove("dragover");
+
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+
+      if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
+        alert("Please drop a CSV file.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const text = event.target.result;
+        await displayCSV(text);
+      };
+      reader.readAsText(file);
+    });
+
+    async function displayCSV(csvText) {
+      const lines = csvText.replace(/\r\n/g, "\n").split("\n").filter(line => line.trim() !== "");
+      if (lines.length === 0) {
+        csvList.innerHTML = "No data found in CSV.";
+        classNameDiv.textContent = "-";
+        classSizeDiv.textContent = "0";
+        if (topTenDiv) topTenDiv.innerHTML = "";
+        return;
+      }
+
+      const sectionName = "Section 4A";
+      classNameDiv.textContent = sectionName;
+      classSizeDiv.textContent = lines.length - 1;
+
+      csvList.innerHTML = "";
+      if (topTenDiv) topTenDiv.innerHTML = "";
+
+      const innerDiv = document.createElement("div");
+      innerDiv.style.overflowY = "auto";
+      innerDiv.style.height = "100%";
+      innerDiv.style.width = "100%";
+
+      const table = document.createElement("table");
+      table.classList.add("csv_table");
+      table.style.width = "100%";
+
+      const header = document.createElement("tr");
+      ["Student Number", "Name", "Score"].forEach(h => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        th.style.position = "sticky";
+        th.style.top = "0";
+        th.style.backgroundColor = "#00796b";
+        th.style.color = "#fff";
+        th.style.zIndex = "1";
+        th.style.padding = "6px";
+        header.appendChild(th);
+      });
+      table.appendChild(header);
+
+      // Fetch all student scores first using promises
+      const studentPromises = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+        const name = values[0]?.trim() || "";
+        const studentNumber = values[1]?.trim() || "";
+        studentPromises.push(
+          (async () => {
+            let score = 0;
+            let username = name;
+            if (studentNumber) {
+              try {
+                const usersRef = collection(db, "users");
+                const q = query(usersRef, where("student_number", "==", studentNumber));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                  const studentDoc = querySnapshot.docs[0].data();
+                  score = studentDoc.Score ?? 0;
+                  username = studentDoc.username || name;
+                }
+              } catch (err) {
+                console.error("Error fetching score:", err);
+              }
+            }
+            return { studentNumber, name, username, score };
+          })()
+        );
+      }
+
+      const studentRows = await Promise.all(studentPromises);
+
+      // Sort by score descending
+      studentRows.sort((a, b) => b.score - a.score);
+
+      // Render full table
+      studentRows.forEach(row => {
+        const tr = document.createElement("tr");
+        [row.studentNumber, row.name, row.score].forEach(val => {
+          const td = document.createElement("td");
+          td.textContent = val;
+          td.style.padding = "6px";
+          td.style.border = "1px solid #00796b";
+          tr.appendChild(td);
+        });
+        table.appendChild(tr);
+      });
+
+      innerDiv.appendChild(table);
+      csvList.appendChild(innerDiv);
+
+      // Top 10
+      if (topTenDiv) {
+        const top10 = studentRows.filter(s => s.score > 0).slice(0, 10);
+        topTenDiv.innerHTML = "<h3>Top 10 Students</h3>";
+        const ol = document.createElement("ol");
+        top10.forEach(student => {
+          const li = document.createElement("li");
+          li.textContent = `${student.username} - ${student.score}`;
+          ol.appendChild(li);
+        });
+        topTenDiv.appendChild(ol);
+      }
+    }
+  }
+});
