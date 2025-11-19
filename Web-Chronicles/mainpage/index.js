@@ -1,5 +1,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+import { 
+  getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc 
+} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+import { 
+  getAuth, onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 
 // --- Firebase Config ---
 const firebaseConfig = {
@@ -16,6 +21,7 @@ const firebaseConfig = {
 // --- Initialize Firebase ---
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth();
 
 document.addEventListener("DOMContentLoaded", () => {
   const teacherPfp = document.querySelector(".teacher_pfp");
@@ -25,29 +31,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const csvList = document.getElementById("csvList");
   const topTenDiv = document.getElementById("top_ten_students"); // div for Top 10
 
-  async function fetchTeacherInfo() {
+  // ========== FETCH LOGGED-IN TEACHER ==========
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      teacherName.textContent = "Not signed in";
+      return;
+    }
+
     try {
-      if (!teacherPfp || !teacherName) return;
+      const teacherRef = doc(db, "users", user.uid);
+      const snap = await getDoc(teacherRef);
 
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("role", "==", "Teacher"));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        teacherName.textContent = "No teacher found";
-        teacherPfp.style.backgroundImage = 'url("Statics/blankProfile.jpg")';
+      if (!snap.exists()) {
+        teacherName.textContent = "Teacher not found";
         return;
       }
 
-      const teacherDoc = querySnapshot.docs[0];
-      const data = teacherDoc.data();
-      const teacherId = teacherDoc.id;
+      const data = snap.data();
 
+      if (data.role !== "Teacher") {
+        teacherName.textContent = "Not a teacher account";
+        return;
+      }
+
+      // ---- Display teacher name ----
       teacherName.textContent = data.name || data.email;
 
+      // ---- Display teacher profile picture ----
       const avatarSrc = data.pfpBase64 || "Statics/blankProfile.jpg";
 
-      teacherPfp.innerHTML = '';
+      teacherPfp.innerHTML = "";
       const avatarImg = document.createElement("img");
       avatarImg.src = avatarSrc;
       avatarImg.classList.add("pfp_img");
@@ -59,6 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       teacherPfp.appendChild(avatarImg);
 
+      // ---- Change teacher PFP ----
       avatarImg.addEventListener("click", () => {
         const input = document.createElement("input");
         input.type = "file";
@@ -69,7 +83,6 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!file) return;
 
           const compressedBase64 = await resizeImage(file, 100, 100);
-          const teacherRef = doc(db, "users", teacherId);
           await updateDoc(teacherRef, { pfpBase64: compressedBase64 });
           avatarImg.src = compressedBase64;
         };
@@ -80,12 +93,10 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       console.error("Error fetching teacher info:", err);
       teacherName.textContent = "Error";
-      teacherPfp.style.backgroundImage = 'url("Statics/blankProfile.jpg")';
     }
-  }
+  });
 
-  fetchTeacherInfo();
-
+  // --- Resize Image Function ---
   function resizeImage(file, maxWidth = 300, maxHeight = 300) {
     return new Promise((resolve) => {
       const img = document.createElement("img");
@@ -95,6 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
         img.onload = () => {
           let width = img.width;
           let height = img.height;
+
           if (width > maxWidth || height > maxHeight) {
             if (width > height) {
               height = Math.round((height * maxWidth) / width);
@@ -104,6 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
               height = maxHeight;
             }
           }
+
           const canvas = document.createElement("canvas");
           canvas.width = width;
           canvas.height = height;
@@ -116,6 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ======== CSV UPLOAD LOGIC (unchanged) ========
   if (csvList) {
     csvList.style.position = "relative";
     csvList.style.overflow = "auto";
@@ -191,12 +205,12 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       table.appendChild(header);
 
-      // Fetch all student scores first using promises
       const studentPromises = [];
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
         const name = values[0]?.trim() || "";
         const studentNumber = values[1]?.trim() || "";
+
         studentPromises.push(
           (async () => {
             let score = 0;
@@ -222,10 +236,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const studentRows = await Promise.all(studentPromises);
 
-      // Sort by score descending
       studentRows.sort((a, b) => b.score - a.score);
 
-      // Render full table
       studentRows.forEach(row => {
         const tr = document.createElement("tr");
         [row.studentNumber, row.name, row.score].forEach(val => {
@@ -241,7 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
       innerDiv.appendChild(table);
       csvList.appendChild(innerDiv);
 
-      // Top 10
       if (topTenDiv) {
         const top10 = studentRows.filter(s => s.score > 0).slice(0, 10);
         topTenDiv.innerHTML = "<h3>Top 10 Students</h3>";
