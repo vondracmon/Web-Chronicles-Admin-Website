@@ -1,9 +1,10 @@
+// Full working script - paste into your page
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
-import { 
-  getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc 
+import {
+  getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
-import { 
-  getAuth, onAuthStateChanged 
+import {
+  getAuth, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 
 // --- Firebase Config ---
@@ -29,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const classNameDiv = document.querySelector(".class_name");
   const classSizeDiv = document.querySelector(".class_size");
   const csvList = document.getElementById("csvList");
-  const topTenDiv = document.getElementById("top_ten_students"); 
+  const topTenDiv = document.getElementById("top_ten_students");
   const extraContainer = document.querySelector(".class_extra_container .student_saves_info");
 
   // --- Load CSV from localStorage if available ---
@@ -53,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const data = snap.data();
-      if (data.role !== "Teacher") {
+      if ((data.role || data.Role) !== "Teacher") {
         teacherName.textContent = "Not a teacher account";
         return;
       }
@@ -150,58 +151,97 @@ document.addEventListener("DOMContentLoaded", () => {
       reader.onload = async (event) => {
         const text = event.target.result;
 
-        // --- Convert CSV to Students array ---
         const lines = text.replace(/\r\n/g, "\n").split("\n").filter(line => line.trim() !== "");
-        const students = [];
+        const csvEntries = [];
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-          const name = values[0]?.trim() || "";
-          const id = values[1]?.trim() || "";
-          students.push({
-            id,
-            name,
-            score: 0,
-            section: ""
-          });
+          const name = (values[0] || "").trim();
+          const id = (values[1] || "").trim();
+          if (id) csvEntries.push({ studentNumber: id, name });
         }
 
-        // --- Save Students array to teacher document and update each student ---
+        const studentNumberList = csvEntries.map(s => s.studentNumber);
+        const usersMap = await fetchUsersMapByStudentNumbers(studentNumberList);
+
+        const students = csvEntries.map(e => {
+          const dbRec = usersMap[e.studentNumber] || null;
+          return {
+            student_number: e.studentNumber,
+            name: e.name || (dbRec?.username || dbRec?.name || ""),
+            score: dbRec?.score ?? 0,
+            section: dbRec?.section ?? "",
+            save_data: dbRec?.save_data ?? dbRec?.saves ?? dbRec?.Save_Data ?? [],
+            firestore_docId: dbRec?._docId ?? null,
+            raw: dbRec ?? null
+          };
+        });
+
         const user = auth.currentUser;
         if (user) {
           try {
             const teacherRef = doc(db, "teachers", user.uid);
-
-            // Fetch current scores from users collection and update teacher Students array
-            for (let s of students) {
-              const usersRef = collection(db, "users");
-              const q = query(usersRef, where("student_number", "==", s.id), where("role", "==", "Student"));
-              const snap = await getDocs(q);
-              if (!snap.empty) {
-                const studentDoc = snap.docs[0];
-                const studentData = studentDoc.data();
-                s.score = studentData.score ?? 0;
-
-                // Optionally update user score if needed (keep in sync with CSV)
-                await updateDoc(doc(db, "users", studentDoc.id), { score: s.score });
-              }
-            }
-
             await updateDoc(teacherRef, { Students: students });
-            console.log("CSV saved and scores updated under 'Students' array!");
+            console.log("CSV saved and merged student info saved under teacher's Students array.");
           } catch (err) {
-            console.error("Error saving CSV to teacher document:", err);
+            console.error("Error saving merged Students to teacher document:", err);
           }
         }
 
-        // Save to localStorage and display
         localStorage.setItem("lastCSV", text);
-        displayCSV(text);
+        displayCSV(text, usersMap);
       };
       reader.readAsText(file);
     });
   }
 
-  async function displayCSV(csvText) {
+  function chunkArray(arr, chunkSize) {
+    const out = [];
+    for (let i = 0; i < arr.length; i += chunkSize) {
+      out.push(arr.slice(i, i + chunkSize));
+    }
+    return out;
+  }
+
+  async function fetchUsersMapByStudentNumbers(numbers) {
+    const map = {};
+    if (!numbers || numbers.length === 0) return map;
+
+    const chunks = chunkArray(numbers, 10);
+    const usersRef = collection(db, "users");
+
+    for (const chunk of chunks) {
+      const q = query(usersRef, where("student_number", "in", chunk));
+      try {
+        const snap = await getDocs(q);
+        snap.forEach(docSnap => {
+          const d = docSnap.data();
+          const roleVal = d.role || d.Role || "";
+          if (roleVal === "Student") {
+            map[d.student_number] = { ...(d), _docId: docSnap.id };
+          }
+        });
+      } catch (err) {
+        console.warn("Chunk query failed, falling back to single queries for chunk:", err);
+        for (const num of chunk) {
+          try {
+            const q2 = query(usersRef, where("student_number", "==", num));
+            const s2 = await getDocs(q2);
+            if (!s2.empty) {
+              const docSnap = s2.docs[0];
+              const d = docSnap.data();
+              const roleVal = d.role || d.Role || "";
+              if (roleVal === "Student") map[d.student_number] = { ...(d), _docId: docSnap.id };
+            }
+          } catch (err2) {
+            console.error("single query fallback failed for", num, err2);
+          }
+        }
+      }
+    }
+    return map;
+  }
+
+  async function displayCSV(csvText, usersMap = null) {
     const lines = csvText.replace(/\r\n/g, "\n").split("\n").filter(line => line.trim() !== "");
     if (lines.length === 0) {
       csvList.innerHTML = "No data found in CSV.";
@@ -213,7 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const sectionName = "Section 4A";
     classNameDiv.textContent = sectionName;
-    classSizeDiv.textContent = lines.length - 1;
+    classSizeDiv.textContent = (lines.length - 1).toString();
 
     csvList.innerHTML = "";
     if (topTenDiv) topTenDiv.innerHTML = "";
@@ -227,6 +267,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const table = document.createElement("table");
     table.classList.add("csv_table");
     table.style.width = "100%";
+    table.style.borderCollapse = "collapse";
 
     const header = document.createElement("tr");
     ["Student Number", "Name", "Score"].forEach(h => {
@@ -247,42 +288,150 @@ document.addEventListener("DOMContentLoaded", () => {
       const values = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
       const name = values[0]?.trim() || "";
       const studentNumber = values[1]?.trim() || "";
-      const score = 0; // initial score, will fetch from teacher Students array if exists
-      studentRows.push({ studentNumber, name, username: name, score });
+
+      let rowData = {
+        studentNumber,
+        name,
+        username: name,
+        score: 0,
+        section: "",
+        save_data: [],
+        rawFirestore: null
+      };
+
+      if (usersMap && usersMap[studentNumber]) {
+        const dbRec = usersMap[studentNumber];
+        rowData.score = dbRec.score ?? 0;
+        rowData.section = dbRec.section ?? "";
+        rowData.save_data = dbRec.save_data ?? dbRec.saves ?? dbRec.Save_Data ?? [];
+        rowData.username = dbRec.username ?? dbRec.name ?? name;
+        rowData.rawFirestore = dbRec;
+      } else if (studentNumber) {
+        try {
+          const usersRef = collection(db, "users");
+          const q = query(usersRef, where("student_number", "==", studentNumber));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const studentDoc = snap.docs[0];
+            const studentData = studentDoc.data();
+            const roleVal = studentData.role || studentData.Role || "";
+            if (roleVal === "Student") {
+              rowData.score = studentData.score ?? 0;
+              rowData.section = studentData.section ?? "";
+              rowData.save_data = studentData.save_data ?? studentData.saves ?? studentData.Save_Data ?? [];
+              rowData.username = studentData.username ?? studentData.name ?? name;
+              rowData.rawFirestore = { ...(studentData), _docId: studentDoc.id };
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching single user for display:", err);
+        }
+      }
+
+      studentRows.push(rowData);
     }
 
-    studentRows.sort((a, b) => b.score - a.score);
+    studentRows.sort((a, b) => (b.score || 0) - (a.score || 0));
 
     studentRows.forEach(row => {
       const tr = document.createElement("tr");
-      [row.studentNumber, row.name, row.score].forEach(val => {
-        const td = document.createElement("td");
-        td.textContent = val;
-        td.style.padding = "6px";
-        td.style.border = "1px solid #00796b";
-        tr.appendChild(td);
-      });
+      tr.style.border = "1px solid #00796b";
+      tr.style.cursor = row.studentNumber ? "pointer" : "default";
 
-      tr.style.cursor = "pointer";
-      tr.addEventListener("click", async () => {
+      const tdNum = document.createElement("td");
+      tdNum.textContent = row.studentNumber;
+      tdNum.style.padding = "6px";
+      tdNum.style.border = "1px solid #00796b";
+      tr.appendChild(tdNum);
+
+      const tdName = document.createElement("td");
+      tdName.textContent = row.username || row.name;
+      tdName.style.padding = "6px";
+      tdName.style.border = "1px solid #00796b";
+      tr.appendChild(tdName);
+
+      const tdScore = document.createElement("td");
+      tdScore.textContent = (row.score ?? 0).toString();
+      tdScore.style.padding = "6px";
+      tdScore.style.border = "1px solid #00796b";
+      tr.appendChild(tdScore);
+
+      tr.addEventListener("click", () => {
         if (!row.studentNumber) return;
-
         table.querySelectorAll("tr").forEach(r => r.style.backgroundColor = "");
         tr.style.backgroundColor = "#b2ebf2";
 
         if (extraContainer) {
-          extraContainer.innerHTML = `<div style="
-            max-height: 150px;
-            height: 150px;
-            overflow-y: auto;
-            padding: 6px;
-            background: #fff0ff;
-            border-radius: 12px;
-            white-space: pre-wrap;
-            word-break: break-word;
-          ">
-            <p><strong>Score:</strong> ${row.score ?? "0"}</p>
-          </div>`;
+          extraContainer.innerHTML = "";
+
+          const infoDiv = document.createElement("div");
+          infoDiv.style.maxHeight = "260px";
+          infoDiv.style.overflowY = "auto";
+          infoDiv.style.padding = "10px";
+          infoDiv.style.background = "#f0f8ff";
+          infoDiv.style.borderRadius = "12px";
+          infoDiv.style.fontFamily = "Arial, sans-serif";
+          infoDiv.style.fontSize = "13px";
+
+          const infoTable = document.createElement("table");
+          infoTable.style.width = "100%";
+          infoTable.style.borderCollapse = "collapse";
+
+          const addRow = (label, value) => {
+            const tr = document.createElement("tr");
+            const tdLabel = document.createElement("td");
+            tdLabel.textContent = label;
+            tdLabel.style.fontWeight = "bold";
+            tdLabel.style.padding = "4px 6px";
+            tdLabel.style.width = "120px";
+            tdLabel.style.verticalAlign = "top";
+            const tdValue = document.createElement("td");
+            tdValue.style.padding = "4px 6px";
+            tdValue.style.whiteSpace = "pre-wrap";
+
+            if (Array.isArray(value)) {
+              value.forEach((s, i) => {
+                const saveDiv = document.createElement("div");
+                const toggle = document.createElement("button");
+                toggle.textContent = `Save ${i+1} (click to toggle)`;
+                toggle.style.marginBottom = "4px";
+                toggle.style.cursor = "pointer";
+                toggle.style.fontSize = "12px";
+
+                const content = document.createElement("pre");
+                content.textContent = JSON.stringify(s, null, 2);
+                content.style.display = "none";
+                content.style.padding = "4px";
+                content.style.background = "#eaeaea";
+                content.style.borderRadius = "6px";
+                content.style.fontSize = "12px";
+                content.style.overflowX = "auto";
+
+                toggle.addEventListener("click", () => {
+                  content.style.display = content.style.display === "none" ? "block" : "none";
+                });
+
+                saveDiv.appendChild(toggle);
+                saveDiv.appendChild(content);
+                tdValue.appendChild(saveDiv);
+              });
+            } else {
+              tdValue.textContent = value;
+            }
+
+            tr.appendChild(tdLabel);
+            tr.appendChild(tdValue);
+            infoTable.appendChild(tr);
+          };
+
+          addRow("Name", row.username || row.name);
+          addRow("Student ID", row.studentNumber);
+          addRow("Score", row.score ?? 0);
+          addRow("Section", row.section ?? "");
+          addRow("Saved Data", row.save_data.length > 0 ? row.save_data : "No save data");
+
+          infoDiv.appendChild(infoTable);
+          extraContainer.appendChild(infoDiv);
         }
       });
 
@@ -298,7 +447,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const ol = document.createElement("ol");
       top10.forEach(student => {
         const li = document.createElement("li");
-        li.textContent = `${student.username} - ${student.score}`;
+        li.textContent = `${student.username || student.name} - ${student.score}`;
         ol.appendChild(li);
       });
       topTenDiv.appendChild(ol);
