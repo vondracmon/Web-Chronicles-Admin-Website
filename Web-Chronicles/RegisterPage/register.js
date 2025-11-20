@@ -48,7 +48,7 @@ window.addEventListener("DOMContentLoaded", () => {
       await sendEmailVerification(user);
 
       // Save user info in Firestore
-      await setDoc(doc(db, "users", user.uid), {
+      await setDoc(doc(db, "teachers", user.uid), {
         uid: user.uid,
         name,
         email,
