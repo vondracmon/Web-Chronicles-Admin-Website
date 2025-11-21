@@ -26,6 +26,8 @@ const auth = getAuth();
 let allStudents = [];
 let currentUserRole = "";
 
+
+
 document.addEventListener("DOMContentLoaded", () => {
   const teacherPfp = document.querySelector(".teacher_pfp");
   const teacherName = document.querySelector(".teacher_name");
@@ -55,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // ------------ ADMIN BRANCH -----------
       if (currentUserRole === "admin") {
-        teacherName.textContent = "Admin: " + (teacherData.name || teacherData.email);
+        teacherName.textContent = "Name: " + (teacherData.name || teacherData.email);
         showAdminPanel();
         return;
       }

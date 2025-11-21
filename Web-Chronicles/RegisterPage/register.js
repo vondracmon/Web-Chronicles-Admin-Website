@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 import { 
   getAuth, 
+  fetchSignInMethodsForEmail,
   createUserWithEmailAndPassword,
   sendEmailVerification 
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
@@ -16,7 +17,7 @@ const firebaseConfig = {
   appId: "1:250178417089:web:29ff41b1864019d4efff40",
 };
 
-// Init
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -26,6 +27,41 @@ window.addEventListener("DOMContentLoaded", () => {
   const emailInput = document.querySelector("#email");
   const passwordInput = document.querySelector("#password");
   const registerBtn = document.querySelector("#registerBtn");
+
+  // Inline warning for email
+  const emailWarning = document.createElement("small");
+  emailWarning.style.color = "red";
+  emailWarning.style.display = "block";
+  emailInput.parentNode.appendChild(emailWarning);
+
+  let emailExists = false; // track if email is already registered
+
+  // Check email existence when password field gets focus
+  passwordInput.addEventListener("focus", async () => {
+    const email = emailInput.value.trim();
+    emailWarning.textContent = "";
+    emailExists = false;
+
+    if (!email) return;
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      emailWarning.textContent = "Invalid email format.";
+      return;
+    }
+
+    try {
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+      if (methods.length > 0) {
+        emailWarning.textContent = "This email is already registered.";
+        emailExists = true;
+      }
+    } catch (err) {
+      console.error("Email check error:", err);
+      emailWarning.textContent = "Error checking email.";
+    }
+  });
 
   registerBtn.addEventListener("click", async () => {
     const name = nameInput.value.trim();
@@ -40,11 +76,18 @@ window.addEventListener("DOMContentLoaded", () => {
       return alert("Password must be at least 8 characters.");
     }
 
+    // Check if email was already flagged as existing
+    if (emailExists) {
+      emailWarning.textContent = "This email is already registered.";
+      emailInput.focus();
+      return;
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // ➤ SEND EMAIL VERIFICATION
+      // Send email verification
       await sendEmailVerification(user);
 
       // Save user info in Firestore
@@ -54,7 +97,6 @@ window.addEventListener("DOMContentLoaded", () => {
         email,
         createdAt: new Date(),
         role: "Teacher",
-        verified: false
       });
 
       alert("📧 Verification email sent!\nPlease check your inbox before logging in.");
@@ -63,9 +105,9 @@ window.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       console.error("Registration error:", err);
 
-      if (err.code === "auth/email-already-in-use") alert("This email is already registered.");
+      if (err.code === "auth/email-already-in-use") emailWarning.textContent = "This email is already registered.";
       else if (err.code === "auth/weak-password") alert("Password should be at least 8 characters.");
-      else if (err.code === "auth/invalid-email") alert("Invalid email format.");
+      else if (err.code === "auth/invalid-email") emailWarning.textContent = "Invalid email format.";
       else alert("Registration failed: " + err.message);
     }
   });
